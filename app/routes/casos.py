@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import List
+import logging
 
 from ..core.database import get_db
 from ..models.user import User
@@ -12,6 +13,7 @@ from ..services import openai_service, document_service, ai_analysis_service
 from .auth import get_current_user
 
 router = APIRouter(prefix="/casos", tags=["Casos"])
+logger = logging.getLogger(__name__)
 
 
 @router.post("/", response_model=CasoResponse, status_code=status.HTTP_201_CREATED)
@@ -138,27 +140,50 @@ def procesar_transcripcion(
     Procesa la transcripción de la conversación con IA y extrae datos estructurados
     para autollenar los campos del caso (hechos, derechos vulnerados, entidad, pretensiones).
     """
+    # 🔍 LOG: Inicio del procesamiento
+    logger.info(f"🤖 POST /casos/{caso_id}/procesar-transcripcion - Iniciando procesamiento")
+    logger.info(f"   Usuario: {current_user.email}")
+
     caso = db.query(Caso).filter(
         Caso.id == caso_id,
         Caso.user_id == current_user.id
     ).first()
 
     if not caso:
+        logger.error(f"❌ Caso {caso_id} no encontrado o no pertenece al usuario {current_user.email}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Caso no encontrado"
         )
+
+    logger.info(f"✅ Caso {caso_id} encontrado - Estado: {caso.estado}")
+
+    # 🔍 LOG: Consulta de mensajes
+    logger.info(f"🔍 Buscando mensajes del caso {caso_id}...")
 
     # Obtener todos los mensajes del caso ordenados por timestamp
     mensajes = db.query(Mensaje).filter(
         Mensaje.caso_id == caso_id
     ).order_by(Mensaje.timestamp.asc()).all()
 
+    # 🔍 LOG: Resultado de la consulta
+    logger.info(f"📊 Mensajes encontrados: {len(mensajes)}")
+
     if not mensajes:
+        logger.error(f"❌ No hay mensajes en el caso {caso_id}")
+        logger.error(f"   Verificar: ¿Se guardaron los mensajes durante la sesión?")
+        logger.error(f"   Revisar logs del agente de LiveKit")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No hay mensajes en este caso para procesar"
         )
+
+    # 🔍 LOG: Detalles de los mensajes
+    logger.info(f"📝 Detalles de los mensajes:")
+    for i, msg in enumerate(mensajes[:5], 1):  # Mostrar solo los primeros 5
+        logger.info(f"   [{i}] {msg.remitente}: '{msg.texto[:50]}...' (ID: {msg.id})")
+    if len(mensajes) > 5:
+        logger.info(f"   ... y {len(mensajes) - 5} mensajes más")
 
     try:
         # Convertir mensajes a formato para el servicio de IA
@@ -171,32 +196,56 @@ def procesar_transcripcion(
             for msg in mensajes
         ]
 
+        logger.info(f"🧠 Llamando a GPT-4o para extraer datos...")
+
         # Extraer datos con IA
         datos_extraidos = openai_service.extraer_datos_conversacion(mensajes_formateados)
 
+        # 🔍 LOG: Datos extraídos
+        logger.info(f"✅ Datos extraídos exitosamente:")
+        logger.info(f"   Hechos: {'✅ Extraído' if datos_extraidos.get('hechos') else '❌ Vacío'}")
+        logger.info(f"   Derechos vulnerados: {'✅ Extraído' if datos_extraidos.get('derechos_vulnerados') else '❌ Vacío'}")
+        logger.info(f"   Entidad accionada: {'✅ Extraído' if datos_extraidos.get('entidad_accionada') else '❌ Vacío'}")
+        logger.info(f"   Pretensiones: {'✅ Extraído' if datos_extraidos.get('pretensiones') else '❌ Vacío'}")
+        logger.info(f"   Fundamentos: {'✅ Extraído' if datos_extraidos.get('fundamentos_derecho') else '❌ Vacío'}")
+
         # Actualizar el caso con los datos extraídos
         # Solo actualiza si el campo extraído no está vacío
+        campos_actualizados = []
+
         if datos_extraidos.get('hechos'):
             caso.hechos = datos_extraidos['hechos']
+            campos_actualizados.append('hechos')
 
         if datos_extraidos.get('derechos_vulnerados'):
             caso.derechos_vulnerados = datos_extraidos['derechos_vulnerados']
+            campos_actualizados.append('derechos_vulnerados')
 
         if datos_extraidos.get('entidad_accionada'):
             caso.entidad_accionada = datos_extraidos['entidad_accionada']
+            campos_actualizados.append('entidad_accionada')
 
         if datos_extraidos.get('pretensiones'):
             caso.pretensiones = datos_extraidos['pretensiones']
+            campos_actualizados.append('pretensiones')
 
         if datos_extraidos.get('fundamentos_derecho'):
             caso.fundamentos_derecho = datos_extraidos['fundamentos_derecho']
+            campos_actualizados.append('fundamentos_derecho')
+
+        logger.info(f"💾 Guardando cambios en la base de datos...")
+        logger.info(f"   Campos actualizados: {', '.join(campos_actualizados) if campos_actualizados else 'Ninguno'}")
 
         db.commit()
         db.refresh(caso)
 
+        logger.info(f"✅ Caso {caso_id} actualizado exitosamente")
+
         return caso
 
     except Exception as e:
+        logger.error(f"❌ Error procesando transcripción: {str(e)}")
+        logger.error(f"   Tipo de error: {type(e).__name__}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error procesando transcripción: {str(e)}"
