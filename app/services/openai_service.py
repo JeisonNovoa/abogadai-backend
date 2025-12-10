@@ -91,7 +91,7 @@ El documento debe estar listo para ser presentado ante un juez de la República 
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-5.1-2025-11-13",
             messages=[
                 {
                     "role": "system",
@@ -103,7 +103,7 @@ El documento debe estar listo para ser presentado ante un juez de la República 
                 }
             ],
             temperature=0.3,  # Temperatura baja para máxima estabilidad en documentos jurídicos
-            max_tokens=4000
+            max_completion_tokens=4000
         )
 
         documento_generado = response.choices[0].message.content
@@ -195,7 +195,7 @@ El documento debe estar listo para ser presentado ante la entidad correspondient
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-5.1-2025-11-13",
             messages=[
                 {
                     "role": "system",
@@ -207,7 +207,7 @@ El documento debe estar listo para ser presentado ante la entidad correspondient
                 }
             ],
             temperature=0.3,  # Temperatura baja para máxima estabilidad en documentos jurídicos
-            max_tokens=3000
+            max_completion_tokens=3000
         )
 
         documento_generado = response.choices[0].message.content
@@ -398,7 +398,7 @@ ASEGÚRATE de incluir TODOS los campos, especialmente los datos personales del s
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-5.1-2025-11-13",
             messages=[
                 {
                     "role": "system",
@@ -410,7 +410,7 @@ ASEGÚRATE de incluir TODOS los campos, especialmente los datos personales del s
                 }
             ],
             temperature=0.3,  # Baja temperatura para mayor precisión
-            max_tokens=2000,
+            max_completion_tokens=2000,
             response_format={"type": "json_object"}  # Forzar respuesta JSON
         )
 

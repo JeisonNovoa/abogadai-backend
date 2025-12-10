@@ -81,7 +81,7 @@ Responde en formato JSON:
 """
 
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-5.1-2025-11-13",
             messages=[
                 {
                     "role": "system",
@@ -227,7 +227,7 @@ Responde en formato JSON:
             system_message = "Eres un revisor experto de documentos legales en Colombia. Evalúas la calidad de acciones de tutela."
 
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-5.1-2025-11-13",
             messages=[
                 {
                     "role": "system",
@@ -375,7 +375,7 @@ Responde en formato JSON:
         system_message = "Eres un abogado constitucionalista experto que evalúa la viabilidad de acciones de tutela en Colombia." if tipo_documento == "tutela" else "Eres un abogado experto en derecho administrativo colombiano que evalúa la viabilidad de derechos de petición."
 
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-5.1-2025-11-13",
             messages=[
                 {
                     "role": "system",

@@ -14,9 +14,19 @@ app = FastAPI(
 )
 
 # Configurar CORS
+# En producción, FRONTEND_URL vendrá de las variables de entorno
+# En desarrollo local, también permitimos localhost
+allowed_origins = [settings.FRONTEND_URL]
+
+# Agregar orígenes de desarrollo si no están ya incluidos
+dev_origins = ["http://localhost:5173", "http://localhost:3000"]
+for origin in dev_origins:
+    if origin not in allowed_origins:
+        allowed_origins.append(origin)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.FRONTEND_URL, "http://localhost:5173", "http://localhost:3000"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
