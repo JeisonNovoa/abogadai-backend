@@ -267,9 +267,115 @@ def validar_campos_importantes(datos_caso: dict) -> List[ValidationMessage]:
     return advertencias
 
 
+def validar_caso_preliminar(caso, tipo_documento: str) -> Dict[str, any]:
+    """
+    🎯 VALIDACIÓN PRELIMINAR (NO BLOQUEANTE)
+
+    Valida el caso después del auto-llenado con IA.
+    Genera SOLO ADVERTENCIAS, nunca bloquea.
+    Permite que el usuario vea todos los datos extraídos (incluso si están mal)
+    y los corrija antes de generar el documento.
+
+    Args:
+        caso: Objeto Caso de SQLAlchemy
+        tipo_documento: "tutela" o "derecho_peticion"
+
+    Returns:
+        Dict con estructura:
+        {
+            "valido": false (siempre, porque es preliminar),
+            "errores": [],  # Siempre vacío en validación preliminar
+            "advertencias": [...]  # Todas las validaciones como advertencias
+        }
+    """
+    # Convertir caso a dict
+    datos_caso = {
+        'nombre_solicitante': caso.nombre_solicitante,
+        'identificacion_solicitante': caso.identificacion_solicitante,
+        'direccion_solicitante': caso.direccion_solicitante,
+        'telefono_solicitante': caso.telefono_solicitante,
+        'email_solicitante': caso.email_solicitante,
+        'entidad_accionada': caso.entidad_accionada,
+        'hechos': caso.hechos,
+        'derechos_vulnerados': caso.derechos_vulnerados,
+        'pretensiones': caso.pretensiones,
+    }
+
+    advertencias = []
+
+    # Campos obligatorios - generar advertencias si están vacíos
+    if not datos_caso.get('nombre_solicitante') or datos_caso['nombre_solicitante'].strip() == "":
+        advertencias.append(ValidationMessage(
+            field="nombre_solicitante",
+            level=ValidationLevel.WARNING,
+            message="El nombre del solicitante está vacío. Debes completarlo antes de generar el documento."
+        ))
+
+    if not datos_caso.get('identificacion_solicitante') or datos_caso['identificacion_solicitante'].strip() == "":
+        advertencias.append(ValidationMessage(
+            field="identificacion_solicitante",
+            level=ValidationLevel.WARNING,
+            message="La identificación del solicitante está vacía. Debes completarla antes de generar el documento."
+        ))
+    else:
+        # Validar formato (como advertencia, no como error)
+        if not (validar_cedula_colombiana(datos_caso['identificacion_solicitante']) or
+                validar_nit_colombiano(datos_caso['identificacion_solicitante'])):
+            advertencias.append(ValidationMessage(
+                field="identificacion_solicitante",
+                level=ValidationLevel.WARNING,
+                message="Esta identificación no parece válida. Verifica que sea correcta (cédula de 6-10 dígitos o NIT)."
+            ))
+
+    if not datos_caso.get('entidad_accionada') or datos_caso['entidad_accionada'].strip() == "":
+        tipo_entidad = "destinataria" if tipo_documento == "derecho_peticion" else "accionada"
+        advertencias.append(ValidationMessage(
+            field="entidad_accionada",
+            level=ValidationLevel.WARNING,
+            message=f"La entidad {tipo_entidad} está vacía. Debes completarla antes de generar el documento."
+        ))
+
+    if not datos_caso.get('hechos') or datos_caso['hechos'].strip() == "":
+        advertencias.append(ValidationMessage(
+            field="hechos",
+            level=ValidationLevel.WARNING,
+            message="Los hechos del caso están vacíos. Debes narrar qué sucedió antes de generar el documento."
+        ))
+
+    if tipo_documento == "tutela":
+        if not datos_caso.get('derechos_vulnerados') or datos_caso['derechos_vulnerados'].strip() == "":
+            advertencias.append(ValidationMessage(
+                field="derechos_vulnerados",
+                level=ValidationLevel.WARNING,
+                message="Los derechos vulnerados están vacíos. Debes indicar qué derechos fundamentales están siendo afectados antes de generar el documento."
+            ))
+
+    if not datos_caso.get('pretensiones') or datos_caso['pretensiones'].strip() == "":
+        campo_nombre = "peticiones" if tipo_documento == "derecho_peticion" else "pretensiones"
+        advertencias.append(ValidationMessage(
+            field="pretensiones",
+            level=ValidationLevel.WARNING,
+            message=f"Las {campo_nombre} están vacías. Debes indicar qué solicitas antes de generar el documento."
+        ))
+
+    # Validar campos importantes (formato de teléfono, email, etc.)
+    advertencias_formato = validar_campos_importantes(datos_caso)
+    advertencias.extend(advertencias_formato)
+
+    return {
+        "valido": len(advertencias) == 0,
+        "errores": [],  # Nunca errores en validación preliminar
+        "advertencias": [a.to_dict() for a in advertencias]
+    }
+
+
 def validar_caso_completo(caso, tipo_documento: str) -> Dict[str, any]:
     """
-    Valida un caso completo y retorna errores y advertencias
+    🔒 VALIDACIÓN COMPLETA (BLOQUEANTE)
+
+    Valida un caso completo antes de generar el documento.
+    Genera ERRORES CRÍTICOS que bloquean la generación si faltan campos obligatorios
+    o tienen formato inválido.
 
     Args:
         caso: Objeto Caso de SQLAlchemy

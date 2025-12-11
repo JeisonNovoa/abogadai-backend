@@ -137,9 +137,14 @@ def validar_caso(
     db: Session = Depends(get_db)
 ):
     """
-    Valida los campos del caso y retorna errores y advertencias
-    sin bloquear el guardado. El frontend usa esto para mostrar
-    validaciones visuales en tiempo real.
+    🎯 VALIDACIÓN PRELIMINAR (NO BLOQUEANTE)
+
+    Valida los campos del caso y retorna SOLO ADVERTENCIAS.
+    Esta validación se usa después del auto-llenado con IA para que el usuario
+    vea qué campos faltan o están mal formateados, pero NO bloquea el guardado.
+
+    El frontend usa esto para mostrar advertencias visuales en tiempo real
+    en el formulario.
     """
     caso = db.query(Caso).filter(
         Caso.id == caso_id,
@@ -152,15 +157,15 @@ def validar_caso(
             detail="Caso no encontrado"
         )
 
-    from ..core.validation_helper import validar_caso_completo
+    from ..core.validation_helper import validar_caso_preliminar
 
     tipo_doc = caso.tipo_documento.value if caso.tipo_documento else "tutela"
-    resultado_validacion = validar_caso_completo(caso, tipo_doc)
+    resultado_validacion = validar_caso_preliminar(caso, tipo_doc)
 
     return {
         "caso_id": caso_id,
         "valido": resultado_validacion["valido"],
-        "errores": resultado_validacion["errores"],
+        "errores": resultado_validacion["errores"],  # Siempre vacío en validación preliminar
         "advertencias": resultado_validacion["advertencias"]
     }
 
@@ -259,8 +264,9 @@ def procesar_transcripcion(
         logger.info(f"   Actúa en representación: {datos_extraidos.get('actua_en_representacion', False)}")
         logger.info(f"   Hubo derecho petición previo: {datos_extraidos.get('hubo_derecho_peticion_previo', False)}")
 
-        # Actualizar el caso con los datos extraídos
-        # Solo actualiza si el campo extraído no está vacío
+        # 🎯 NUEVA LÓGICA: Actualizar el caso con TODOS los datos extraídos
+        # Incluso si están vacíos, mal formateados o incompletos
+        # Las validaciones mostrarán advertencias en el formulario, pero no bloquean el auto-llenado
         campos_actualizados = []
 
         # Actualizar tipo_documento (siempre, basado en la detección de IA)
@@ -272,58 +278,66 @@ def procesar_transcripcion(
                 caso.tipo_documento = TipoDocumento.DERECHO_PETICION
             campos_actualizados.append('tipo_documento')
 
-        if datos_extraidos.get('hechos'):
+        # Actualizar TODOS los campos, incluso si están vacíos o mal formateados
+        # Esto permite que el usuario vea lo que la IA entendió y lo corrija si es necesario
+
+        # Solo actualizar si el dato extraído no es None (pero sí si es string vacío)
+        if 'hechos' in datos_extraidos:
             caso.hechos = datos_extraidos['hechos']
             campos_actualizados.append('hechos')
 
-        if datos_extraidos.get('derechos_vulnerados'):
+        if 'derechos_vulnerados' in datos_extraidos:
             caso.derechos_vulnerados = datos_extraidos['derechos_vulnerados']
             campos_actualizados.append('derechos_vulnerados')
 
-        if datos_extraidos.get('entidad_accionada'):
+        if 'entidad_accionada' in datos_extraidos:
             caso.entidad_accionada = datos_extraidos['entidad_accionada']
             campos_actualizados.append('entidad_accionada')
 
-        if datos_extraidos.get('pretensiones'):
+        if 'pretensiones' in datos_extraidos:
             caso.pretensiones = datos_extraidos['pretensiones']
             campos_actualizados.append('pretensiones')
 
-        if datos_extraidos.get('fundamentos_derecho'):
+        if 'fundamentos_derecho' in datos_extraidos:
             caso.fundamentos_derecho = datos_extraidos['fundamentos_derecho']
             campos_actualizados.append('fundamentos_derecho')
 
-        # 🆕 DATOS DEL SOLICITANTE (nuevos campos)
-        if datos_extraidos.get('nombre_solicitante'):
+        # 🆕 DATOS DEL SOLICITANTE (actualizar siempre, tal cual la IA los captó)
+        if 'nombre_solicitante' in datos_extraidos:
             caso.nombre_solicitante = datos_extraidos['nombre_solicitante']
             campos_actualizados.append('nombre_solicitante')
 
-        if datos_extraidos.get('identificacion_solicitante'):
+        if 'identificacion_solicitante' in datos_extraidos:
+            # Guardar TAL CUAL la IA lo extrajo, incluso si está mal formateado
+            # El usuario verá el warning en el formulario y podrá corregirlo
             caso.identificacion_solicitante = datos_extraidos['identificacion_solicitante']
             campos_actualizados.append('identificacion_solicitante')
 
-        if datos_extraidos.get('direccion_solicitante'):
+        if 'direccion_solicitante' in datos_extraidos:
             caso.direccion_solicitante = datos_extraidos['direccion_solicitante']
             campos_actualizados.append('direccion_solicitante')
 
-        if datos_extraidos.get('telefono_solicitante'):
+        if 'telefono_solicitante' in datos_extraidos:
+            # Guardar TAL CUAL, el usuario verá el warning si está mal formateado
             caso.telefono_solicitante = datos_extraidos['telefono_solicitante']
             campos_actualizados.append('telefono_solicitante')
 
-        if datos_extraidos.get('email_solicitante'):
+        if 'email_solicitante' in datos_extraidos:
+            # Guardar TAL CUAL, el usuario verá el warning si está mal formateado
             caso.email_solicitante = datos_extraidos['email_solicitante']
             campos_actualizados.append('email_solicitante')
 
         # 🆕 DATOS DE LA ENTIDAD (campos adicionales)
-        if datos_extraidos.get('direccion_entidad'):
+        if 'direccion_entidad' in datos_extraidos:
             caso.direccion_entidad = datos_extraidos['direccion_entidad']
             campos_actualizados.append('direccion_entidad')
 
-        if datos_extraidos.get('representante_legal'):
+        if 'representante_legal' in datos_extraidos:
             caso.representante_legal = datos_extraidos['representante_legal']
             campos_actualizados.append('representante_legal')
 
         # 🆕 PRUEBAS
-        if datos_extraidos.get('pruebas'):
+        if 'pruebas' in datos_extraidos:
             caso.pruebas = datos_extraidos['pruebas']
             campos_actualizados.append('pruebas')
 
@@ -332,19 +346,19 @@ def procesar_transcripcion(
             caso.actua_en_representacion = datos_extraidos['actua_en_representacion']
             campos_actualizados.append('actua_en_representacion')
 
-        if datos_extraidos.get('nombre_representado'):
+        if 'nombre_representado' in datos_extraidos:
             caso.nombre_representado = datos_extraidos['nombre_representado']
             campos_actualizados.append('nombre_representado')
 
-        if datos_extraidos.get('identificacion_representado'):
+        if 'identificacion_representado' in datos_extraidos:
             caso.identificacion_representado = datos_extraidos['identificacion_representado']
             campos_actualizados.append('identificacion_representado')
 
-        if datos_extraidos.get('relacion_representado'):
+        if 'relacion_representado' in datos_extraidos:
             caso.relacion_representado = datos_extraidos['relacion_representado']
             campos_actualizados.append('relacion_representado')
 
-        if datos_extraidos.get('tipo_representado'):
+        if 'tipo_representado' in datos_extraidos:
             caso.tipo_representado = datos_extraidos['tipo_representado']
             campos_actualizados.append('tipo_representado')
 
