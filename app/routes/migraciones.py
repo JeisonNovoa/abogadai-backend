@@ -12,7 +12,7 @@ router = APIRouter(prefix="/migraciones", tags=["Migraciones"])
 logger = logging.getLogger(__name__)
 
 # ⚠️ IMPORTANTE: Cambiar esta clave por una segura y eliminar después de usar
-SECRET_KEY_MIGRACION = "tu-clave-secreta-aqui-2024"
+SECRET_KEY_MIGRACION = "abogadai-migracion-subsidiariedad-2024-segura"
 
 @router.post("/subsidiariedad")
 async def ejecutar_migracion_subsidiariedad(
