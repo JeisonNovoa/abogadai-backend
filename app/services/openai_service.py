@@ -48,36 +48,91 @@ FUNDAMENTOS DE DERECHO:
 PRUEBAS Y DOCUMENTOS ANEXOS:
 {datos_caso.get('pruebas', 'No se especificaron pruebas')}
 
-INSTRUCCIONES:
-1. Genera un documento formal de tutela con encabezado dirigido al Juez competente
+INSTRUCCIONES PARA FORMATO PROFESIONAL:
+
+1. ENCABEZADO FORMAL:
+   Inicia el documento con este formato exacto:
+
+   **ACCIÓN DE TUTELA**
+
+   Señor
+   JUEZ COMPETENTE
+   REPARTO TUTELAS
+   Ciudad
+
+   REFERENCIA: Acción de Tutela
+   ACCIONANTE: [Nombre completo del solicitante]
+   ACCIONADO: [Nombre de la entidad]
+
+   [Nombre completo del solicitante], identificado(a) como aparece al pie de mi firma, {f'actuando en calidad de {datos_caso.get("relacion_representado", "representante legal")} de {datos_caso.get("nombre_representado", "")},' if datos_caso.get('actua_en_representacion', False) else 'actuando en nombre propio,'} me permito presentar ACCIÓN DE TUTELA contra [entidad], con fundamento en los artículos 86 de la Constitución Política de Colombia y el Decreto 2591 de 1991, con base en los siguientes:
 
 2. Si el solicitante actúa en representación de otra persona:
    - Indica claramente en el encabezado quién firma y en qué calidad (madre, padre, cuidador, apoderado, etc.)
    - Explica quién es la persona cuyos derechos están siendo vulnerados
    - En la sección de PROCEDENCIA Y LEGITIMIDAD, justifica por qué tiene legitimidad para actuar
 
-3. ESTRUCTURA REQUERIDA (en este orden):
-   - I. HECHOS: Narrativa clara y cronológica de los hechos que fundamentan la acción
-   - II. DERECHOS VULNERADOS: Identificación explícita de los derechos fundamentales vulnerados con sus artículos constitucionales
-   - III. PRETENSIONES: Lo que se solicita que ordene el juez de manera clara y específica
-   - IV. FUNDAMENTOS DE DERECHO: Base jurídica constitucional (Art. 86 C.P. y Decreto 2591 de 1991)
-   - V. PROCEDENCIA Y LEGITIMIDAD: Explica por qué la tutela es procedente en este caso concreto, citando el Decreto 2591 de 1991 y la jurisprudencia aplicable. Demuestra la legitimación en la causa (quién presenta y por qué tiene derecho a hacerlo). Si actúa en representación, justifica la legitimidad (ej: para menores, el padre/madre tiene legitimidad; para adultos mayores dependientes, el cuidador; etc.)
-   - VI. INEXISTENCIA DE OTRO MECANISMO IDÓNEO: Explica qué otros medios ya se usaron (derecho de petición, quejas internas, etc.) y por qué no fueron suficientes, o por qué no existe otro mecanismo de defensa judicial eficaz. Si hay perjuicio irremediable o urgencia, menciónalo aquí
-   - VII. PRUEBAS: Enumeración de las pruebas que se anexan o se solicitarán. USA EXACTAMENTE la información proporcionada en "PRUEBAS Y DOCUMENTOS ANEXOS" arriba. Si no se especificaron pruebas, indica que se aportarán oportunamente
-   - VIII. JURAMENTO: Manifestación bajo juramento de no haber presentado otra tutela por los mismos hechos
-   - IX. NOTIFICACIONES: Dirección física y correo electrónico para notificaciones
+3. ESTRUCTURA REQUERIDA (usar NUMERACIÓN ROMANA):
 
-4. Usa lenguaje jurídico apropiado pero comprensible
+   **I. HECHOS**
+   Narrativa clara y cronológica de los hechos que fundamentan la acción. Numera los hechos si son varios.
 
-5. Cita artículos constitucionales relevantes (ej: Art. 11, 13, 15, 16, 20, 48, 49, etc. según corresponda)
+   **II. DERECHOS FUNDAMENTALES VULNERADOS**
+   Identificación explícita de los derechos fundamentales vulnerados con sus artículos constitucionales.
+   Formato: "- Derecho a... (Artículo XX de la Constitución Política)"
 
-6. Las PRETENSIONES deben solicitar órdenes específicas al juez (no son "peticiones" como en un derecho de petición)
+   **III. PRETENSIONES**
+   Lo que se solicita que ordene el juez de manera clara y específica.
+   Usar formato: "PRIMERA:", "SEGUNDA:", "TERCERA:", etc.
 
-7. En la sección V (PROCEDENCIA Y LEGITIMIDAD), explica claramente por qué se cumplen los requisitos de procedibilidad de la tutela
+   **IV. FUNDAMENTOS DE DERECHO**
+   Base jurídica constitucional (Art. 86 C.P. y Decreto 2591 de 1991).
 
-8. En la sección VI (INEXISTENCIA DE OTRO MECANISMO IDÓNEO), demuestra la subsidiariedad de la acción explicando los intentos previos o la urgencia del caso
+   **V. PROCEDENCIA Y LEGITIMIDAD**
+   Explica por qué la tutela es procedente en este caso concreto, citando el Decreto 2591 de 1991 y la jurisprudencia aplicable.
+   Demuestra la legitimación en la causa (quién presenta y por qué tiene derecho a hacerlo).
+   Si actúa en representación, justifica la legitimidad (ej: para menores, el padre/madre tiene legitimidad; para adultos mayores dependientes, el cuidador; etc.)
 
-9. Asegúrate de que el documento sea completo y listo para radicar
+   **VI. INEXISTENCIA DE OTRO MECANISMO DE DEFENSA JUDICIAL**
+   Explica qué otros medios ya se usaron (derecho de petición, quejas internas, etc.) y por qué no fueron suficientes, o por qué no existe otro mecanismo de defensa judicial eficaz.
+   Si hay perjuicio irremediable o urgencia, menciónalo aquí.
+
+   **VII. PRUEBAS Y ANEXOS**
+   Enumeración formal de las pruebas que se anexan.
+   Formato: "- Anexo 1: [descripción]"
+   USA EXACTAMENTE la información proporcionada en "PRUEBAS Y DOCUMENTOS ANEXOS" arriba.
+   Si no se especificaron pruebas, indica: "Se aportarán las pruebas pertinentes en el término legal."
+
+   **VIII. JURAMENTO**
+   "Manifiesto bajo la gravedad del juramento que no he interpuesto otra acción de tutela por los mismos hechos y derechos ante ninguna autoridad judicial."
+
+   **IX. NOTIFICACIONES**
+   Formato formal:
+   "Para efectos de notificaciones:
+   Dirección física: [dirección]
+   Correo electrónico: [email]
+   Teléfono: [teléfono]"
+
+4. CIERRE FORMAL:
+   Después de la sección IX, incluir:
+
+   "Del señor Juez, respetuosamente,
+
+   _________________________________
+   [Nombre completo del solicitante]
+   C.C. No. [número de identificación]
+   Dirección: [dirección]
+   Teléfono: [teléfono]
+   Email: [correo electrónico]"
+
+5. Usa lenguaje jurídico formal, profesional y técnico
+
+6. Cita artículos constitucionales relevantes con formato correcto: "Artículo XX de la Constitución Política de Colombia" o "Art. XX C.P."
+
+7. Las PRETENSIONES deben solicitar órdenes específicas al juez usando: "PRIMERA:", "SEGUNDA:", "TERCERA:"
+
+8. Todos los títulos de secciones principales deben estar en NEGRITA usando formato **TÍTULO**
+
+9. El documento debe tener apariencia de documento legal oficial, no de borrador
 
 IMPORTANTE SOBRE JURISPRUDENCIA:
 - SOLO cita jurisprudencia si estás COMPLETAMENTE SEGURO de que existe
@@ -87,7 +142,7 @@ IMPORTANTE SOBRE JURISPRUDENCIA:
 - Puedes mencionar "según jurisprudencia reiterada de la Corte Constitucional" sin número específico
 - NUNCA inventes números de sentencias
 
-El documento debe estar listo para ser presentado ante un juez de la República de Colombia."""
+El documento debe estar completo, profesional y listo para ser presentado ante un juez de la República de Colombia."""
 
     try:
         response = client.chat.completions.create(
@@ -153,43 +208,82 @@ FUNDAMENTOS DE DERECHO:
 PRUEBAS Y DOCUMENTOS ANEXOS:
 {datos_caso.get('pruebas', 'No se especificaron documentos anexos')}
 
-INSTRUCCIONES:
-1. Genera un documento formal de derecho de petición con encabezado apropiado dirigido a la entidad destinataria
+INSTRUCCIONES PARA FORMATO PROFESIONAL:
 
-2. ESTRUCTURA REQUERIDA (en este orden):
-   - I. OBJETO: Presentar la naturaleza de la petición de manera clara y directa
-   - II. HECHOS: Relatar los hechos cronológicamente y de forma clara
-   - III. FUNDAMENTOS DE DERECHO:
-     * SIEMPRE citar el Art. 23 de la Constitución Política de Colombia
-     * SIEMPRE citar la Ley 1437 de 2011 (Código de Procedimiento Administrativo y de lo Contencioso Administrativo)
-     * Si involucra menores de edad: citar el Art. 44 C.P. (derechos fundamentales de los niños) y mencionar el interés superior del menor
-     * Si involucra adultos mayores: citar el Art. 46 C.P. (protección especial a la tercera edad)
-     * Si involucra personas con discapacidad: citar el Art. 47 C.P. (protección y atención especial)
-     * Redactar un párrafo jurídico sólido que conecte estas normas con el caso
-   - IV. PETICIONES: Enumerar NUMERADAS (PRIMERO, SEGUNDO, TERCERO, etc.) de forma clara, específica y accionable lo que se solicita a la entidad. Cada petición debe responder a una necesidad concreta del solicitante
-   - V. ANEXOS: Si se especificaron pruebas o documentos anexos, USA EXACTAMENTE la información proporcionada en "PRUEBAS Y DOCUMENTOS ANEXOS" arriba. Si no se especificaron, omite esta sección o indica que se aportarán posteriormente
-   - VI. NOTIFICACIONES: Indicar dirección física y correo electrónico para notificaciones
+1. ENCABEZADO FORMAL:
+   Inicia el documento con este formato exacto:
 
-3. En los FUNDAMENTOS DE DERECHO:
-   - Incluye un párrafo explicando el derecho de petición como derecho fundamental
-   - Menciona EXPRESAMENTE:
-     * Término de 15 días hábiles (Art. 14 Ley 1437) para responder peticiones generales
-     * Término de 10 días hábiles (Art. 14 Ley 1437) cuando se solicitan documentos o información específica
-     * Usa el término correcto según el tipo de petición del caso
-   - Si es sujeto de especial protección (menor, adulto mayor, persona con discapacidad), enfatiza la obligación reforzada del Estado
+   **DERECHO DE PETICIÓN**
 
-4. En las PETICIONES:
-   - USA el formato: "PRIMERO:", "SEGUNDO:", "TERCERO:", etc.
-   - Cada petición debe ser específica, medible y accionable
-   - No mezcles múltiples solicitudes en una sola petición
+   Señor(a)
+   {datos_caso.get('representante_legal', 'REPRESENTANTE LEGAL')}
+   {datos_caso.get('entidad_accionada', 'ENTIDAD DESTINATARIA')}
+   {datos_caso.get('direccion_entidad', 'Ciudad')}
 
-5. Usa lenguaje formal, respetuoso y técnico apropiado para un derecho de petición
+   REFERENCIA: Derecho de Petición
+   PETICIONARIO: [Nombre completo del solicitante]
+   ASUNTO: [Breve descripción del objeto de la petición]
 
-6. IMPORTANTE - NO uses terminología de acción de tutela:
+   [Nombre completo del solicitante], identificado(a) como aparece al pie de mi firma, {f'actuando en calidad de {datos_caso.get("relacion_representado", "representante legal")} de {datos_caso.get("nombre_representado", "")},' if datos_caso.get('actua_en_representacion', False) else 'actuando en nombre propio,'} respetuosamente me dirijo a usted para presentar DERECHO DE PETICIÓN, con fundamento en el artículo 23 de la Constitución Política de Colombia y la Ley 1437 de 2011, con base en lo siguiente:
+
+2. ESTRUCTURA REQUERIDA (usar NUMERACIÓN ROMANA):
+
+   **I. OBJETO**
+   Presentar la naturaleza de la petición de manera clara y directa.
+
+   **II. HECHOS**
+   Relatar los hechos cronológicamente y de forma clara.
+
+   **III. FUNDAMENTOS DE DERECHO**
+   - SIEMPRE citar el Art. 23 de la Constitución Política de Colombia
+   - SIEMPRE citar la Ley 1437 de 2011 (Código de Procedimiento Administrativo y de lo Contencioso Administrativo)
+   - Mencionar EXPRESAMENTE el término de respuesta:
+     * 15 días hábiles (Art. 14 Ley 1437) para peticiones generales
+     * 10 días hábiles (Art. 14 Ley 1437) cuando se solicitan documentos o información específica
+   - Si involucra menores de edad: citar el Art. 44 C.P. (derechos fundamentales de los niños) y mencionar el interés superior del menor
+   - Si involucra adultos mayores: citar el Art. 46 C.P. (protección especial a la tercera edad)
+   - Si involucra personas con discapacidad: citar el Art. 47 C.P. (protección y atención especial)
+
+   **IV. PETICIONES**
+   Enumerar de forma clara, específica y accionable lo que se solicita a la entidad.
+   Usar formato: "PRIMERO:", "SEGUNDO:", "TERCERO:", etc.
+   Cada petición debe ser específica, medible y accionable.
+
+   **V. ANEXOS**
+   Si se especificaron pruebas o documentos anexos, USA EXACTAMENTE la información proporcionada en "PRUEBAS Y DOCUMENTOS ANEXOS" arriba.
+   Formato: "- Anexo 1: [descripción]"
+   Si no se especificaron, indica: "Se aportarán posteriormente los documentos necesarios."
+
+   **VI. NOTIFICACIONES**
+   Formato formal:
+   "Para efectos de notificaciones y respuestas:
+   Dirección física: [dirección]
+   Correo electrónico: [email]
+   Teléfono: [teléfono]"
+
+3. CIERRE FORMAL:
+   Después de la sección VI, incluir:
+
+   "Cordialmente,
+
+   _________________________________
+   [Nombre completo del solicitante]
+   C.C. No. [número de identificación]
+   Dirección: [dirección]
+   Teléfono: [teléfono]
+   Email: [correo electrónico]"
+
+4. Usa lenguaje formal, respetuoso y técnico apropiado para un derecho de petición
+
+5. IMPORTANTE - NO uses terminología de acción de tutela:
    - NO uses: "accionante", "accionado", "juez", "sentencia", "fallo", "pretensiones", "amparo"
    - USA: "peticionario", "entidad destinataria", "respuesta", "peticiones", "solicitud"
 
-7. El documento debe estar completo y listo para radicar
+6. Todos los títulos de secciones principales deben estar en NEGRITA usando formato **TÍTULO**
+
+7. El documento debe tener apariencia de documento legal oficial, no de borrador
+
+8. El documento debe estar completo y listo para radicar
 
 El documento debe estar listo para ser presentado ante la entidad correspondiente en Colombia."""
 
