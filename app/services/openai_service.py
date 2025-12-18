@@ -31,10 +31,12 @@ SOLICITANTE:
 ENTIDAD ACCIONADA:
 - Nombre: {datos_caso.get('entidad_accionada', '')}
 - Dirección: {datos_caso.get('direccion_entidad', '')}
-- Representante Legal: {datos_caso.get('representante_legal', '')}
 
 HECHOS:
 {datos_caso.get('hechos', '')}
+
+CIUDAD DONDE OCURRIERON LOS HECHOS:
+{datos_caso.get('ciudad_de_los_hechos', '')}
 
 DERECHOS VULNERADOS:
 {datos_caso.get('derechos_vulnerados', '')}
@@ -194,10 +196,12 @@ SOLICITANTE:
 ENTIDAD DESTINATARIA:
 - Nombre: {datos_caso.get('entidad_accionada', '')}
 - Dirección: {datos_caso.get('direccion_entidad', '')}
-- Representante Legal: {datos_caso.get('representante_legal', '')}
 
 HECHOS:
 {datos_caso.get('hechos', '')}
+
+CIUDAD DONDE OCURRIERON LOS HECHOS:
+{datos_caso.get('ciudad_de_los_hechos', '')}
 
 PETICIONES:
 {datos_caso.get('pretensiones', '')}
@@ -216,7 +220,7 @@ INSTRUCCIONES PARA FORMATO PROFESIONAL:
    **DERECHO DE PETICIÓN**
 
    Señor(a)
-   {datos_caso.get('representante_legal', 'REPRESENTANTE LEGAL')}
+   REPRESENTANTE LEGAL
    {datos_caso.get('entidad_accionada', 'ENTIDAD DESTINATARIA')}
    {datos_caso.get('direccion_entidad', 'Ciudad')}
 
@@ -418,9 +422,9 @@ Enfócate ÚNICAMENTE en extraer:
    Busca cuando dice: "la dirección de la EPS es...", "la sede está en...", "está ubicada en...".
    Si no lo menciona, deja este campo vacío.
 
-6. **representante_legal**: Nombre del representante legal de la entidad accionada.
-   Busca cuando dice: "el gerente es...", "el director es...", "el representante legal es...".
-   Ejemplos: "Dr. Juan Pérez (Gerente)", "María López (Directora)", "Alcalde Pedro García".
+6. **ciudad_de_los_hechos**: La ciudad donde ocurrieron los hechos narrados.
+   Busca cuando dice: "esto pasó en Bogotá", "fue en Medellín", "ocurrió en Cali", etc.
+   IMPORTANTE: Solo la ciudad, no la dirección completa. Ejemplos: "Bogotá", "Medellín", "Cali".
    Si no lo menciona, deja este campo vacío.
 
 7. **pretensiones**: Lo que solicita el usuario.
@@ -445,12 +449,15 @@ Enfócate ÚNICAMENTE en extraer:
     Si no hay información suficiente, deja este campo vacío.
 
 13. **relacion_representado**: (Solo si actúa en representación) Relación entre el solicitante y el representado.
-    Ejemplo: "madre", "padre", "apoderado", "tutor legal", "cuidador", etc.
+    Extrae EXACTAMENTE lo que dice el usuario. Ejemplos: "madre", "padre", "hermano", "hermana", "tío", "tía",
+    "abuelo", "abuela", "hijo", "hija", "apoderado", "tutor legal", "cuidador", "prima", "primo", etc.
+    IMPORTANTE: No limites a opciones predefinidas, acepta cualquier relación familiar o legal que mencione.
     Si no hay información suficiente, deja este campo vacío.
 
-14. **tipo_representado**: (Solo si actúa en representación) Tipo de persona representada.
-    Opciones: "menor", "adulto_mayor", "persona_discapacidad", "otro"
-    Determina esto según el contexto de la conversación.
+14. **tipo_representado**: (Solo si actúa en representación) Tipo o descripción de la persona representada.
+    Extrae EXACTAMENTE lo que dice el usuario. Ejemplos: "menor de edad", "adulto mayor", "persona con discapacidad",
+    "persona en condición de vulnerabilidad", "niño", "adolescente", "anciano", etc.
+    IMPORTANTE: No limites a opciones predefinidas, acepta cualquier descripción que mencione el usuario.
     Si no hay información suficiente, deja este campo vacío.
 
 15. **hubo_derecho_peticion_previo**: (Booleano) true si en la conversación se menciona que ya hubo un derecho de petición previo (presentado, radicado, enviado), false si no se menciona o no hubo.
@@ -496,10 +503,10 @@ Devuelve ÚNICAMENTE un objeto JSON válido con esta estructura exacta, sin mark
     "tipo_documento": "tutela" o "derecho_peticion",
     "razon_tipo_documento": "explicación breve de por qué se eligió tutela o derecho de petición",
     "hechos": "narrativa de los hechos o cadena vacía",
+    "ciudad_de_los_hechos": "ciudad donde ocurrieron los hechos o cadena vacía",
     "derechos_vulnerados": "derechos con artículos o cadena vacía",
     "entidad_accionada": "nombre de la entidad o cadena vacía",
     "direccion_entidad": "dirección de la entidad o cadena vacía",
-    "representante_legal": "nombre del representante legal o cadena vacía",
     "pretensiones": "lo que se solicita o cadena vacía",
     "fundamentos_derecho": "fundamentos legales o cadena vacía",
     "pruebas": "lista de documentos/pruebas o cadena vacía",

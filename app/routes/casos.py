@@ -208,7 +208,7 @@ def obtener_campos_criticos(
         ]
         sensibles = [
             "direccion_entidad",
-            "representante_legal",
+            "ciudad_de_los_hechos",
             "pruebas"
         ]
     else:  # derecho_peticion
@@ -219,7 +219,7 @@ def obtener_campos_criticos(
         ]
         sensibles = [
             "direccion_entidad",
-            "representante_legal",
+            "ciudad_de_los_hechos",
             "pruebas"
         ]
 
@@ -484,9 +484,10 @@ def procesar_transcripcion(
             caso.direccion_entidad = datos_extraidos['direccion_entidad']
             campos_actualizados.append('direccion_entidad')
 
-        if 'representante_legal' in datos_extraidos:
-            caso.representante_legal = datos_extraidos['representante_legal']
-            campos_actualizados.append('representante_legal')
+        # 🆕 CIUDAD DE LOS HECHOS
+        if 'ciudad_de_los_hechos' in datos_extraidos:
+            caso.ciudad_de_los_hechos = datos_extraidos['ciudad_de_los_hechos']
+            campos_actualizados.append('ciudad_de_los_hechos')
 
         # 🆕 PRUEBAS
         if 'pruebas' in datos_extraidos:
@@ -635,8 +636,8 @@ def generar_documento(
             'tipo_representado': caso.tipo_representado,
             'entidad_accionada': caso.entidad_accionada,
             'direccion_entidad': caso.direccion_entidad,
-            'representante_legal': caso.representante_legal,
             'hechos': caso.hechos,
+            'ciudad_de_los_hechos': caso.ciudad_de_los_hechos,
             'derechos_vulnerados': caso.derechos_vulnerados,
             'pretensiones': caso.pretensiones,
             'fundamentos_derecho': caso.fundamentos_derecho,

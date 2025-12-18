@@ -45,10 +45,10 @@ class Caso(Base):
     # Datos de la entidad accionada
     entidad_accionada = Column(String(200), nullable=True)
     direccion_entidad = Column(Text, nullable=True)
-    representante_legal = Column(String(200), nullable=True)
 
     # Contenido del caso
     hechos = Column(Text, nullable=True)
+    ciudad_de_los_hechos = Column(String(100), nullable=True)
     derechos_vulnerados = Column(Text, nullable=True)
     pretensiones = Column(Text, nullable=True)
     fundamentos_derecho = Column(Text, nullable=True)

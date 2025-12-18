@@ -35,8 +35,8 @@ class CasoBase(BaseModel):
     tipo_representado: Optional[str] = None
     entidad_accionada: Optional[str] = None
     direccion_entidad: Optional[str] = None
-    representante_legal: Optional[str] = None
     hechos: Optional[str] = None
+    ciudad_de_los_hechos: Optional[str] = None
     derechos_vulnerados: Optional[str] = None
     pretensiones: Optional[str] = None
     fundamentos_derecho: Optional[str] = None
@@ -61,8 +61,8 @@ class CasoUpdate(BaseModel):
     tipo_representado: Optional[str] = None
     entidad_accionada: Optional[str] = None
     direccion_entidad: Optional[str] = None
-    representante_legal: Optional[str] = None
     hechos: Optional[str] = None
+    ciudad_de_los_hechos: Optional[str] = None
     derechos_vulnerados: Optional[str] = None
     pretensiones: Optional[str] = None
     fundamentos_derecho: Optional[str] = None
