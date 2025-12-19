@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import List
+from datetime import datetime
 import logging
 
 from ..core.database import get_db
@@ -666,6 +667,133 @@ def generar_documento(
         )
 
 
+@router.post("/{caso_id}/simular-pago", response_model=CasoResponse)
+def simular_pago(
+    caso_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    🧪 SIMULADOR DE PAGO (DESARROLLO)
+
+    Desbloquea el documento inmediatamente sin cobro real.
+    En producción se reemplazará por integración con pasarela de pago real.
+
+    Requisitos:
+    - Caso debe tener documento generado
+    - Caso debe pertenecer al usuario autenticado
+    - Solo se puede desbloquear una vez
+    """
+    logger.info(f"🧪 POST /casos/{caso_id}/simular-pago - Usuario: {current_user.email}")
+
+    caso = db.query(Caso).filter(
+        Caso.id == caso_id,
+        Caso.user_id == current_user.id
+    ).first()
+
+    if not caso:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Caso no encontrado"
+        )
+
+    if not caso.documento_generado:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No hay documento generado para desbloquear"
+        )
+
+    if caso.documento_desbloqueado:
+        logger.warning(f"⚠️ Documento ya estaba desbloqueado desde {caso.fecha_pago}")
+        # No es error, simplemente retornamos el caso
+        return caso
+
+    # Desbloquear documento
+    caso.documento_desbloqueado = True
+    caso.fecha_pago = datetime.utcnow()
+
+    db.commit()
+    db.refresh(caso)
+
+    logger.info(f"✅ Documento {caso_id} desbloqueado exitosamente")
+    logger.info(f"   💰 Pago simulado - Fecha: {caso.fecha_pago}")
+
+    return caso
+
+
+@router.get("/{caso_id}/documento")
+def obtener_documento(
+    caso_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Retorna el documento con preview o completo según estado de desbloqueo.
+
+    Respuesta:
+    - preview: True/False (si está bloqueado)
+    - contenido: Texto visible (15% si bloqueado, 100% si desbloqueado)
+    - contenido_completo_length: Longitud total del documento
+    - precio: Precio ficticio (para desarrollo)
+    - mensaje: Mensaje de bloqueo
+    - descarga_habilitada: Si puede descargar PDF
+    - fecha_pago: Fecha de desbloqueo (si aplica)
+    """
+    caso = db.query(Caso).filter(
+        Caso.id == caso_id,
+        Caso.user_id == current_user.id
+    ).first()
+
+    if not caso:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Caso no encontrado"
+        )
+
+    if not caso.documento_generado:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El caso no tiene un documento generado"
+        )
+
+    documento_completo = caso.documento_generado
+    longitud_total = len(documento_completo)
+
+    # Determinar si está bloqueado
+    esta_bloqueado = not caso.documento_desbloqueado
+
+    if esta_bloqueado:
+        # Mostrar solo 15% del documento
+        limite = int(longitud_total * 0.15)
+        # Buscar último salto de línea para no cortar palabras
+        ultimo_salto = documento_completo.rfind('\n', 0, limite)
+        if ultimo_salto > limite * 0.8:
+            limite = ultimo_salto
+
+        contenido_visible = documento_completo[:limite]
+
+        return {
+            "preview": True,
+            "contenido": contenido_visible,
+            "contenido_completo_length": longitud_total,
+            "precio": 50000,  # Precio ficticio en COP
+            "mensaje": "Desbloquea el documento completo para ver todo el contenido y descargarlo.",
+            "descarga_habilitada": False,
+            "fecha_pago": None
+        }
+    else:
+        # Documento desbloqueado - mostrar todo
+        return {
+            "preview": False,
+            "contenido": documento_completo,
+            "contenido_completo_length": longitud_total,
+            "precio": 50000,
+            "mensaje": "",
+            "descarga_habilitada": True,
+            "fecha_pago": caso.fecha_pago.isoformat() if caso.fecha_pago else None
+        }
+
+
 @router.get("/{caso_id}/descargar/pdf")
 def descargar_pdf(
     caso_id: int,
@@ -692,6 +820,13 @@ def descargar_pdf(
             detail="El caso no tiene un documento generado"
         )
 
+    # 🔒 VALIDACIÓN DE PAYWALL
+    if not caso.documento_desbloqueado:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="El documento está bloqueado. Debes realizar el pago para descargarlo."
+        )
+
     try:
         # Generar PDF
         pdf_buffer = document_service.generar_pdf(
@@ -716,51 +851,3 @@ def descargar_pdf(
         )
 
 
-@router.get("/{caso_id}/descargar/docx")
-def descargar_docx(
-    caso_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """
-    Descarga el documento generado como DOCX
-    """
-    caso = db.query(Caso).filter(
-        Caso.id == caso_id,
-        Caso.user_id == current_user.id
-    ).first()
-
-    if not caso:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Caso no encontrado"
-        )
-
-    if not caso.documento_generado:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="El caso no tiene un documento generado"
-        )
-
-    try:
-        # Generar DOCX
-        docx_buffer = document_service.generar_docx(
-            caso.documento_generado,
-            caso.nombre_solicitante or "documento"
-        )
-
-        # Nombre del archivo según el tipo de documento
-        tipo_doc_nombre = "tutela" if caso.tipo_documento.value == "tutela" else "derecho_peticion"
-        filename = f"{tipo_doc_nombre}_{caso.nombre_solicitante or 'documento'}_{caso.id}.docx"
-
-        return StreamingResponse(
-            docx_buffer,
-            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            headers={"Content-Disposition": f"attachment; filename={filename}"}
-        )
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error generando DOCX: {str(e)}"
-        )

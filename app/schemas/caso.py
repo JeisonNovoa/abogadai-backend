@@ -76,6 +76,8 @@ class CasoResponse(CasoBase):
     user_id: int
     estado: EstadoCasoEnum
     documento_generado: Optional[str] = None
+    documento_desbloqueado: bool = False
+    fecha_pago: Optional[datetime] = None
     analisis_fortaleza: Optional[Dict[str, Any]] = None
     analisis_calidad: Optional[Dict[str, Any]] = None
     analisis_jurisprudencia: Optional[Dict[str, Any]] = None

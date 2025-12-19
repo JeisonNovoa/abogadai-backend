@@ -57,6 +57,10 @@ class Caso(Base):
     # Documento generado
     documento_generado = Column(Text, nullable=True)
 
+    # Sistema de paywall
+    documento_desbloqueado = Column(Boolean, default=False, nullable=False)
+    fecha_pago = Column(DateTime, nullable=True)
+
     # Validación de subsidiariedad de la tutela (Art. 86 C.P.)
     hubo_derecho_peticion_previo = Column(Boolean, default=False, nullable=True)
     detalle_derecho_peticion_previo = Column(Text, nullable=True)
