@@ -117,7 +117,7 @@ Responde en formato JSON:
         }
 
 
-def analizar_calidad_documento(documento: str, datos_caso: dict, tipo_documento: str = "tutela") -> Dict:
+def analizar_calidad_documento(documento: str, datos_caso: dict, tipo_documento: str = "TUTELA") -> Dict:
     """
     Analiza la calidad del documento generado.
 
@@ -136,7 +136,7 @@ def analizar_calidad_documento(documento: str, datos_caso: dict, tipo_documento:
         Dict con análisis de calidad
     """
 
-    if tipo_documento == "derecho_peticion":
+    if tipo_documento == "DERECHO_PETICION":
         # Prompt específico para derechos de petición
         prompt = f"""Como revisor experto de documentos legales colombianos, analiza la calidad del siguiente DERECHO DE PETICIÓN.
 
@@ -221,7 +221,7 @@ Responde en formato JSON:
 
     try:
         # System message según el tipo de documento
-        if tipo_documento == "derecho_peticion":
+        if tipo_documento == "DERECHO_PETICION":
             system_message = "Eres un revisor experto de documentos legales en Colombia. Evalúas la calidad de derechos de petición."
         else:
             system_message = "Eres un revisor experto de documentos legales en Colombia. Evalúas la calidad de acciones de tutela."
@@ -257,7 +257,7 @@ Responde en formato JSON:
         }
 
 
-def analizar_fortaleza_caso(datos_caso: dict, tipo_documento: str = "tutela") -> Dict:
+def analizar_fortaleza_caso(datos_caso: dict, tipo_documento: str = "TUTELA") -> Dict:
     """
     Analiza la fortaleza del caso antes de generar el documento.
 
@@ -273,7 +273,7 @@ def analizar_fortaleza_caso(datos_caso: dict, tipo_documento: str = "tutela") ->
         Dict con análisis de fortaleza
     """
 
-    if tipo_documento == "derecho_peticion":
+    if tipo_documento == "DERECHO_PETICION":
         prompt = f"""Como abogado experto en derecho administrativo colombiano, analiza la fortaleza de este derecho de petición ANTES de generar el documento.
 
 DATOS DEL CASO:
@@ -372,7 +372,7 @@ Responde en formato JSON:
 """
 
     try:
-        system_message = "Eres un abogado constitucionalista experto que evalúa la viabilidad de acciones de tutela en Colombia." if tipo_documento == "tutela" else "Eres un abogado experto en derecho administrativo colombiano que evalúa la viabilidad de derechos de petición."
+        system_message = "Eres un abogado constitucionalista experto que evalúa la viabilidad de acciones de tutela en Colombia." if tipo_documento == "TUTELA" else "Eres un abogado experto en derecho administrativo colombiano que evalúa la viabilidad de derechos de petición."
 
         response = client.chat.completions.create(
             model="gpt-5.1-2025-11-13",
@@ -486,7 +486,7 @@ def generar_sugerencias_mejora(documento: str, analisis_calidad: dict, analisis_
     }
 
 
-def analisis_completo_documento(documento: str, datos_caso: dict, tipo_documento: str = "tutela") -> Dict:
+def analisis_completo_documento(documento: str, datos_caso: dict, tipo_documento: str = "TUTELA") -> Dict:
     """
     Realiza un análisis completo del documento generado.
 

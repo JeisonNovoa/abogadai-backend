@@ -328,7 +328,7 @@ def validar_caso_preliminar(caso, tipo_documento: str) -> Dict[str, any]:
             ))
 
     if not datos_caso.get('entidad_accionada') or datos_caso['entidad_accionada'].strip() == "":
-        tipo_entidad = "destinataria" if tipo_documento == "derecho_peticion" else "accionada"
+        tipo_entidad = "destinataria" if tipo_documento == "DERECHO_PETICION" else "accionada"
         advertencias.append(ValidationMessage(
             field="entidad_accionada",
             level=ValidationLevel.WARNING,
@@ -342,7 +342,7 @@ def validar_caso_preliminar(caso, tipo_documento: str) -> Dict[str, any]:
             message="Los hechos del caso están vacíos. Debes narrar qué sucedió antes de generar el documento."
         ))
 
-    if tipo_documento == "tutela":
+    if tipo_documento == "TUTELA":
         if not datos_caso.get('derechos_vulnerados') or datos_caso['derechos_vulnerados'].strip() == "":
             advertencias.append(ValidationMessage(
                 field="derechos_vulnerados",
@@ -351,7 +351,7 @@ def validar_caso_preliminar(caso, tipo_documento: str) -> Dict[str, any]:
             ))
 
     if not datos_caso.get('pretensiones') or datos_caso['pretensiones'].strip() == "":
-        campo_nombre = "peticiones" if tipo_documento == "derecho_peticion" else "pretensiones"
+        campo_nombre = "peticiones" if tipo_documento == "DERECHO_PETICION" else "pretensiones"
         advertencias.append(ValidationMessage(
             field="pretensiones",
             level=ValidationLevel.WARNING,
@@ -403,7 +403,7 @@ def validar_caso_completo(caso, tipo_documento: str) -> Dict[str, any]:
     }
 
     # Validar campos críticos según el tipo de documento
-    if tipo_documento == "tutela":
+    if tipo_documento == "TUTELA":
         errores = validar_campos_criticos_tutela(datos_caso)
     else:
         errores = validar_campos_criticos_derecho_peticion(datos_caso)

@@ -1,12 +1,14 @@
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.core.config import settings
 from app.core.database import engine, Base
-from app.routes import auth, livekit, casos, referencias, sesiones, mensajes, perfil, migrations
+from app.routes import auth, livekit, casos, referencias, sesiones, mensajes, perfil, migrations, usuarios, admin
 import logging
+import os
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -94,6 +96,17 @@ app.include_router(sesiones.router)
 app.include_router(mensajes.router)
 app.include_router(perfil.router, prefix="/api")
 app.include_router(migrations.router)  # Endpoint temporal para migraciones
+app.include_router(usuarios.router)  # NUEVO - Endpoints de niveles y beneficios
+app.include_router(admin.router)  # NUEVO - Endpoints de administración
+
+# Configurar carpeta de archivos estáticos para evidencias de reembolso
+uploads_dir = "uploads"
+if not os.path.exists(uploads_dir):
+    os.makedirs(uploads_dir)
+    logger.info(f"📁 Carpeta de uploads creada: {uploads_dir}")
+
+app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
+logger.info(f"📁 Archivos estáticos montados en /uploads desde {os.path.abspath(uploads_dir)}")
 
 
 @app.get("/")

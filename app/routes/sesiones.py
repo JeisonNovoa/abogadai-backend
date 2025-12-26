@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from livekit import api
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import uuid
 
 from ..core.config import settings
@@ -9,6 +9,7 @@ from ..core.database import get_db
 from ..models.user import User
 from ..models.caso import Caso, TipoDocumento, EstadoCaso
 from .auth import get_current_user
+from ..services import sesion_service, nivel_service
 
 router = APIRouter(prefix="/sesiones", tags=["Sesiones"])
 
@@ -28,10 +29,26 @@ async def iniciar_sesion(
     - NO genera token de LiveKit (eso se hace en /sesiones/{caso_id}/conectar)
     - NO marca fecha_inicio_sesion (eso se hace al conectar)
 
-    El frontend mostrará la UI en estado "Pre-llamada" con botón "Iniciar sesión"
+    NUEVO - Sistema de Límites:
+    - Valida límites de sesión antes de crear caso
+    - Retorna HTTP 429 si límite alcanzado
     """
 
     try:
+        # 🔒 VALIDAR LÍMITES DE SESIÓN
+        validacion = sesion_service.puede_crear_sesion(current_user.id, db)
+
+        if not validacion["permitido"]:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail={
+                    "error": "Límite de sesiones alcanzado",
+                    "razon": validacion["razon"],
+                    "sesiones_disponibles": validacion["sesiones_disponibles"],
+                    "minutos_disponibles": validacion["minutos_disponibles"]
+                }
+            )
+
         # 1. Crear nuevo caso (sin iniciar sesión de LiveKit aún)
         session_id = str(uuid.uuid4())
 
@@ -110,7 +127,11 @@ async def conectar_sesion(
         # 1. Marcar inicio de sesión
         if not caso.fecha_inicio_sesion:
             caso.fecha_inicio_sesion = datetime.utcnow()
+            caso.estado = EstadoCaso.TEMPORAL  # Cambiar a TEMPORAL (sesión activa)
             db.commit()
+
+            # 📊 NO registrar en sesiones_diarias aquí - solo al finalizar/generar documento
+            # Esto evita que sesiones abandonadas cuenten como sesión del día
 
         # 2. Generar token de LiveKit
         if not settings.LIVEKIT_API_KEY or not settings.LIVEKIT_API_SECRET:
@@ -157,16 +178,108 @@ async def finalizar_sesion(
 
     Marca la fecha de finalización de la sesión
     NO cambia el estado porque el caso sigue en 'borrador' hasta que el usuario genere el documento
+
+    NUEVO - Sistema de Límites:
+    - Calcula duración real de la sesión
+    - Registra minutos consumidos en sesiones_diarias
     """
     caso = db.query(Caso).filter(Caso.id == caso_id).first()
     if not caso:
         raise HTTPException(status_code=404, detail="Caso no encontrado")
 
+    # Verificar si ya fue finalizada anteriormente
+    ya_fue_finalizada = caso.fecha_fin_sesion is not None
+
     caso.fecha_fin_sesion = datetime.utcnow()
+
+    # Calcular duración en minutos
+    duracion_minutos = 0
+    if caso.fecha_inicio_sesion:
+        duracion_segundos = (caso.fecha_fin_sesion - caso.fecha_inicio_sesion).total_seconds()
+        duracion_minutos = int(duracion_segundos / 60)
+
+        # 📊 Registrar fin de sesión con minutos consumidos
+        # Solo se contará como sesión si es la primera vez que se finaliza y duró >1 min
+        sesion_service.registrar_fin_sesion(caso.id, duracion_minutos, db, ya_fue_finalizada)
+
     db.commit()
 
     return {
         "message": "Sesión finalizada",
         "caso_id": caso_id,
-        "duracion_minutos": (caso.fecha_fin_sesion - caso.fecha_inicio_sesion).total_seconds() / 60 if caso.fecha_inicio_sesion else None
+        "duracion_minutos": duracion_minutos
+    }
+
+
+@router.get("/validar-limite")
+async def validar_limite_sesion(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    🔒 NUEVO - Valida si el usuario puede crear sesión sin crearla
+
+    Retorna información de límites y disponibilidad
+    El frontend puede usar esto para mostrar advertencias antes de iniciar
+    """
+    validacion = sesion_service.puede_crear_sesion(current_user.id, db)
+
+    # Obtener uso actual del día
+    hoy = date.today()
+    uso = sesion_service.obtener_uso_diario(current_user.id, hoy, db)
+
+    # Campos compatibles con el frontend (ModalConfirmarSesion)
+    return {
+        # Campos originales
+        "puede_crear_sesion": validacion["permitido"],
+        "permitido": validacion["permitido"],  # Alias
+        "razon": validacion["razon"],
+        # Campos que el modal espera
+        "sesiones_usadas": uso["sesiones_creadas"],
+        "sesiones_disponibles": validacion["sesiones_disponibles"],
+        "minutos_usados": uso["minutos_consumidos"],
+        "minutos_disponibles": validacion["minutos_disponibles"],
+        "duracion_maxima_sesion": validacion["limite_minutos_sesion"],
+        "limite_minutos_sesion": validacion["limite_minutos_sesion"]
+    }
+
+
+@router.get("/uso-diario")
+async def obtener_uso_diario_endpoint(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    📊 NUEVO - Retorna uso de sesiones del día actual
+
+    Útil para mostrar estadísticas al usuario
+    """
+    hoy = date.today()
+    uso = sesion_service.obtener_uso_diario(current_user.id, hoy, db)
+    limites = nivel_service.obtener_limites_usuario(current_user.id, db)
+
+    # Calcular total de sesiones permitidas (base + extra)
+    total_sesiones = uso["sesiones_base_permitidas"] + uso["sesiones_extra_bonus"]
+
+    # Calcular minutos disponibles
+    minutos_disponibles = limites["min_totales"]
+    if minutos_disponibles is not None:
+        minutos_disponibles = max(0, minutos_disponibles - uso["minutos_consumidos"])
+    else:
+        minutos_disponibles = 999999  # Sin límite (nivel ORO)
+
+    # Formato compatible con frontend
+    return {
+        "fecha": uso["fecha"],
+        # Frontend espera "sesiones_usadas" en lugar de "sesiones_creadas"
+        "sesiones_usadas": uso["sesiones_creadas"],
+        "sesiones_disponibles": total_sesiones,  # Total permitido (no disponibles restantes)
+        # Frontend espera "minutos_usados" en lugar de "minutos_consumidos"
+        "minutos_usados": uso["minutos_consumidos"],
+        "minutos_disponibles": minutos_disponibles,
+        # Mantener compatibilidad con versión anterior
+        "sesiones_creadas": uso["sesiones_creadas"],
+        "minutos_consumidos": uso["minutos_consumidos"],
+        "sesiones_base_permitidas": uso["sesiones_base_permitidas"],
+        "sesiones_extra_bonus": uso["sesiones_extra_bonus"]
     }

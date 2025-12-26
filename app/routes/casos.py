@@ -1,16 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
-from typing import List
-from datetime import datetime
+from typing import List, Optional
+from datetime import datetime, timedelta
 import logging
+import os
 
 from ..core.database import get_db
 from ..models.user import User
 from ..models.caso import Caso, EstadoCaso, TipoDocumento
 from ..models.mensaje import Mensaje
 from ..schemas.caso import CasoCreate, CasoUpdate, CasoResponse, CasoListResponse
-from ..services import openai_service, document_service
+from ..services import openai_service, document_service, pago_service
 from .auth import get_current_user
 
 router = APIRouter(prefix="/casos", tags=["Casos"])
@@ -197,10 +198,10 @@ def obtener_campos_criticos(
             detail="Caso no encontrado"
         )
 
-    tipo_doc = caso.tipo_documento.value if caso.tipo_documento else "tutela"
+    tipo_doc = caso.tipo_documento.value if caso.tipo_documento else "TUTELA"
 
     # Campos bloqueantes según tipo de documento (plan.md líneas 77-102)
-    if tipo_doc == "tutela":
+    if tipo_doc == "TUTELA":
         bloqueantes = [
             "entidad_accionada",
             "hechos",
@@ -298,7 +299,7 @@ def validar_caso(
 
     from ..core.validation_helper import validar_caso_preliminar
 
-    tipo_doc = caso.tipo_documento.value if caso.tipo_documento else "tutela"
+    tipo_doc = caso.tipo_documento.value if caso.tipo_documento else "TUTELA"
     resultado_validacion = validar_caso_preliminar(caso, tipo_doc)
 
     return {
@@ -582,7 +583,7 @@ def generar_documento(
 
     # ⚖️ VALIDACIÓN DE SUBSIDIARIEDAD (Art. 86 C.P. - Decreto 2591/1991)
     # Si es tutela, DEBE cumplir requisitos de subsidiariedad
-    if caso.tipo_documento and caso.tipo_documento.value == "tutela":
+    if caso.tipo_documento and caso.tipo_documento.value == "TUTELA":
         logger.info(f"⚖️ Validando subsidiariedad para tutela del caso {caso_id}...")
 
         # Verificar si es_procedente_tutela fue evaluado y es False
@@ -608,7 +609,7 @@ def generar_documento(
     # 🔍 VALIDACIÓN ESTRICTA: Validar campos críticos según tipo de documento
     from ..core.validation_helper import validar_caso_completo
 
-    tipo_doc = caso.tipo_documento.value if caso.tipo_documento else "tutela"
+    tipo_doc = caso.tipo_documento.value if caso.tipo_documento else "TUTELA"
     resultado_validacion = validar_caso_completo(caso, tipo_doc)
 
     if not resultado_validacion["valido"]:
@@ -655,8 +656,13 @@ def generar_documento(
         caso.documento_generado = documento_generado
         caso.estado = EstadoCaso.GENERADO
 
+        # 📅 NUEVO - Calcular fecha de vencimiento (14 días desde ahora)
+        caso.fecha_vencimiento = datetime.utcnow() + timedelta(days=14)
+
         db.commit()
         db.refresh(caso)
+
+        logger.info(f"✅ Documento generado exitosamente - Vence: {caso.fecha_vencimiento}")
 
         return caso
 
@@ -667,7 +673,7 @@ def generar_documento(
         )
 
 
-@router.post("/{caso_id}/simular-pago", response_model=CasoResponse)
+@router.post("/{caso_id}/simular-pago")
 def simular_pago(
     caso_id: int,
     current_user: User = Depends(get_current_user),
@@ -676,13 +682,14 @@ def simular_pago(
     """
     🧪 SIMULADOR DE PAGO (DESARROLLO)
 
-    Desbloquea el documento inmediatamente sin cobro real.
-    En producción se reemplazará por integración con pasarela de pago real.
+    NUEVA LÓGICA - Sistema de Niveles y Beneficios:
+    1. Crea registro en tabla pagos
+    2. Desbloquea documento
+    3. Actualiza nivel del usuario
+    4. Desbloquea +2 sesiones extra inmediatas
+    5. Retorna beneficios obtenidos
 
-    Requisitos:
-    - Caso debe tener documento generado
-    - Caso debe pertenecer al usuario autenticado
-    - Solo se puede desbloquear una vez
+    En producción se reemplazará por integración con pasarela de pago real.
     """
     logger.info(f"🧪 POST /casos/{caso_id}/simular-pago - Usuario: {current_user.email}")
 
@@ -705,20 +712,58 @@ def simular_pago(
 
     if caso.documento_desbloqueado:
         logger.warning(f"⚠️ Documento ya estaba desbloqueado desde {caso.fecha_pago}")
-        # No es error, simplemente retornamos el caso
-        return caso
+        # Retornar info del pago existente
+        return {
+            "success": True,
+            "message": "Documento ya estaba desbloqueado",
+            "caso": caso,
+            "pago_existente": True
+        }
 
-    # Desbloquear documento
-    caso.documento_desbloqueado = True
-    caso.fecha_pago = datetime.utcnow()
+    try:
+        # 💳 CREAR PAGO Y PROCESAR BENEFICIOS
+        monto = 50000  # Precio en COP
+        pago = pago_service.crear_pago_simulado(current_user.id, caso_id, monto, db)
 
-    db.commit()
-    db.refresh(caso)
+        # Refrescar caso para obtener cambios
+        db.refresh(caso)
 
-    logger.info(f"✅ Documento {caso_id} desbloqueado exitosamente")
-    logger.info(f"   💰 Pago simulado - Fecha: {caso.fecha_pago}")
+        logger.info(f"✅ Pago procesado exitosamente")
+        logger.info(f"   💰 Monto: ${monto} COP")
+        logger.info(f"   📈 Nivel actualizado")
+        logger.info(f"   🎁 +2 sesiones extra desbloqueadas")
 
-    return caso
+        # Obtener beneficios procesados
+        from ..services import nivel_service
+        nivel_info = nivel_service.obtener_limites_usuario(current_user.id, db)
+
+        return {
+            "success": True,
+            "message": "Pago procesado exitosamente",
+            "caso": caso,
+            "pago": {
+                "id": pago.id,
+                "monto": float(pago.monto),
+                "estado": pago.estado.value,
+                "fecha_pago": pago.fecha_pago
+            },
+            "beneficios": {
+                "documento_desbloqueado": True,
+                "sesiones_extra_desbloqueadas": 2,
+                "nivel_actualizado": {
+                    "nivel": nivel_info["nivel"],
+                    "nombre_nivel": nivel_info["nombre_nivel"],
+                    "sesiones_dia": nivel_info["sesiones_dia"]
+                }
+            }
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Error procesando pago: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error procesando pago: {str(e)}"
+        )
 
 
 @router.get("/{caso_id}/documento")
@@ -835,7 +880,7 @@ def descargar_pdf(
         )
 
         # Nombre del archivo según el tipo de documento
-        tipo_doc_nombre = "tutela" if caso.tipo_documento.value == "tutela" else "derecho_peticion"
+        tipo_doc_nombre = "tutela" if caso.tipo_documento.value == "TUTELA" else "derecho_peticion"
         filename = f"{tipo_doc_nombre}_{caso.nombre_solicitante or 'documento'}_{caso.id}.pdf"
 
         return StreamingResponse(
@@ -848,6 +893,146 @@ def descargar_pdf(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error generando PDF: {str(e)}"
+        )
+
+
+@router.post("/{caso_id}/solicitar-reembolso")
+async def solicitar_reembolso(
+    caso_id: int,
+    motivo: str = Form(...),
+    evidencia: UploadFile = File(None),  # Opcional
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    💸 NUEVO - Solicita reembolso por rechazo legal
+
+    El usuario puede subir evidencia del rechazo (documento oficial) - OPCIONAL
+    Solo aplica si el documento fue rechazado legalmente (tutela/derecho petición)
+
+    Requisitos:
+    - Caso debe estar pagado
+    - Debe proporcionar motivo del rechazo
+    - Evidencia es opcional (recomendada)
+    """
+    logger.info(f"💸 POST /casos/{caso_id}/solicitar-reembolso - Usuario: {current_user.email}")
+
+    # Verificar que el caso existe y pertenece al usuario
+    caso = db.query(Caso).filter(
+        Caso.id == caso_id,
+        Caso.user_id == current_user.id
+    ).first()
+
+    if not caso:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Caso no encontrado"
+        )
+
+    # Validar que puede solicitar reembolso
+    validacion = pago_service.verificar_puede_solicitar_reembolso(caso_id, db)
+
+    if not validacion["puede_solicitar"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=validacion["razon"]
+        )
+
+    try:
+        evidencia_url = None
+
+        # Guardar archivo de evidencia (si se proporcionó)
+        if evidencia and evidencia.filename:
+            upload_dir = "uploads/evidencias_reembolso"
+            os.makedirs(upload_dir, exist_ok=True)
+
+            # Generar nombre único para el archivo
+            timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+            file_extension = os.path.splitext(evidencia.filename)[1]
+            filename = f"caso_{caso_id}_{timestamp}{file_extension}"
+            file_path = os.path.join(upload_dir, filename)
+
+            # Guardar archivo
+            with open(file_path, "wb") as buffer:
+                content = await evidencia.read()
+                buffer.write(content)
+
+            evidencia_url = f"/{file_path}"
+            logger.info(f"   📄 Evidencia guardada: {evidencia_url}")
+
+        # Registrar solicitud de reembolso
+        resultado = pago_service.solicitar_reembolso(caso_id, motivo, evidencia_url, db)
+
+        logger.info(f"✅ Solicitud de reembolso registrada")
+        logger.info(f"   📄 Evidencia guardada: {evidencia_url}")
+
+        return {
+            "success": True,
+            "message": "Solicitud de reembolso registrada exitosamente",
+            **resultado,
+            "nota": "Tu solicitud será revisada por un administrador en las próximas 24-48 horas"
+        }
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"❌ Error procesando solicitud de reembolso: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error procesando solicitud: {str(e)}"
+        )
+
+
+@router.get("/historial-pagos")
+async def obtener_historial_pagos(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    📜 NUEVO - Retorna historial de pagos del usuario
+
+    Incluye todos los pagos (exitosos, fallidos, reembolsados)
+    con información del caso asociado
+    """
+    logger.info(f"📜 GET /casos/historial-pagos - Usuario: {current_user.email}")
+
+    try:
+        pagos = pago_service.obtener_pagos_usuario(current_user.id, db)
+
+        # Formatear respuesta con información del caso
+        historial = []
+        for pago in pagos:
+            caso = db.query(Caso).filter(Caso.id == pago.caso_id).first()
+
+            historial.append({
+                "pago_id": pago.id,
+                "caso_id": pago.caso_id,
+                "monto": float(pago.monto),
+                "estado": pago.estado.value,
+                "metodo_pago": pago.metodo_pago.value,
+                "fecha_pago": pago.fecha_pago,
+                "fecha_reembolso": pago.fecha_reembolso,
+                "motivo_reembolso": pago.motivo_reembolso,
+                "caso": {
+                    "tipo_documento": caso.tipo_documento.value if caso else None,
+                    "nombre_solicitante": caso.nombre_solicitante if caso else None,
+                    "estado": caso.estado.value if caso else None
+                }
+            })
+
+        return {
+            "total_pagos": len(historial),
+            "historial": historial
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Error obteniendo historial: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error obteniendo historial: {str(e)}"
         )
 
 

@@ -5,15 +5,19 @@ from enum import Enum
 
 
 class TipoDocumentoEnum(str, Enum):
-    TUTELA = "tutela"
-    DERECHO_PETICION = "derecho_peticion"
+    TUTELA = "TUTELA"
+    DERECHO_PETICION = "DERECHO_PETICION"
 
 
 class EstadoCasoEnum(str, Enum):
-    BORRADOR = "borrador"
-    GENERADO = "generado"
-    FINALIZADO = "finalizado"
-    ABANDONADO = "abandonado"
+    TEMPORAL = "TEMPORAL"  # Sesión activa, conversando con avatar
+    GENERADO = "GENERADO"  # Documento creado, esperando pago
+    PAGADO = "PAGADO"  # Documento desbloqueado
+    REEMBOLSADO = "REEMBOLSADO"  # Pago reembolsado
+    # Estados legacy (mantener por compatibilidad)
+    BORRADOR = "BORRADOR"
+    FINALIZADO = "FINALIZADO"
+    ABANDONADO = "ABANDONADO"
 
 
 class CasoBase(BaseModel):
@@ -95,6 +99,14 @@ class CasoListResponse(BaseModel):
     estado: EstadoCasoEnum
     nombre_solicitante: Optional[str] = None
     entidad_accionada: Optional[str] = None
+    documento_desbloqueado: bool = False
+    # Campos de reembolso
+    reembolso_solicitado: bool = False
+    fecha_solicitud_reembolso: Optional[datetime] = None
+    motivo_rechazo: Optional[str] = None
+    evidencia_rechazo_url: Optional[str] = None
+    fecha_reembolso: Optional[datetime] = None
+    comentario_admin_reembolso: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

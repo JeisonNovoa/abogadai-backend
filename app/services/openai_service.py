@@ -376,7 +376,7 @@ Enfócate ÚNICAMENTE en extraer:
    - NO hay perjuicio irremediable (urgencia extrema que no puede esperar 15 días)
    - Es trámite administrativo normal (información, servicios, quejas, reclamos)
 
-   → ACCIÓN: tipo_documento = "derecho_peticion"
+   → ACCIÓN: tipo_documento = "DERECHO_PETICION"
    → razon_tipo_documento = "No procede tutela sin agotar derecho de petición previo. No hay perjuicio irremediable."
 
    ✅ TUTELA PROCEDE SI (subsidiariedad cumplida):
@@ -386,7 +386,7 @@ Enfócate ÚNICAMENTE en extraer:
    - O respondieron negando sin fundamento válido
    - O la respuesta no resolvió el problema
 
-   → ACCIÓN: tipo_documento = "tutela"
+   → ACCIÓN: tipo_documento = "TUTELA"
    → razon_tipo_documento = "Procede tutela. Ya agotó derecho de petición sin solución satisfactoria."
 
    Caso 2: PERJUICIO IRREMEDIABLE (urgencia que no puede esperar 15 días)
@@ -395,7 +395,7 @@ Enfócate ÚNICAMENTE en extraer:
    - Daño irreparable si se espera (ejemplo: pérdida permanente de movilidad, tratamiento de cáncer que no puede retrasarse)
    - Situación médica certificada como urgente/emergencia
 
-   → ACCIÓN: tipo_documento = "tutela"
+   → ACCIÓN: tipo_documento = "TUTELA"
    → razon_tipo_documento = "Procede tutela por perjuicio irremediable. Urgencia extrema justifica excepción a subsidiariedad."
 
    Caso 3: NO EXISTE OTRO MECANISMO JUDICIAL
@@ -403,7 +403,7 @@ Enfócate ÚNICAMENTE en extraer:
    - NO hay otro medio de defensa judicial eficaz disponible
    - El derecho de petición NO sería suficiente para proteger el derecho
 
-   → ACCIÓN: tipo_documento = "tutela"
+   → ACCIÓN: tipo_documento = "TUTELA"
    → razon_tipo_documento = "Procede tutela. No existe otro mecanismo judicial eficaz."
 
 2. **hechos**: Narrativa cronológica y detallada de los hechos.
@@ -482,9 +482,9 @@ Enfócate ÚNICAMENTE en extraer:
     Si es_procedente_tutela = true, deja este campo vacío.
 
 20. **tipo_documento_recomendado**: (String) El tipo de documento que REALMENTE debería generarse según subsidiariedad.
-    Valores posibles: "tutela" o "derecho_peticion"
-    - Si es_procedente_tutela = true → "tutela"
-    - Si es_procedente_tutela = false → "derecho_peticion"
+    Valores posibles: "TUTELA" o "DERECHO_PETICION"
+    - Si es_procedente_tutela = true → "TUTELA"
+    - Si es_procedente_tutela = false → "DERECHO_PETICION"
 
 INSTRUCCIONES IMPORTANTES:
 - ⚠️ RECUERDA: NO extraigas datos personales del solicitante (nombre, cédula, dirección, teléfono, email) - ya están en el perfil del usuario
@@ -500,7 +500,7 @@ INSTRUCCIONES IMPORTANTES:
 FORMATO DE SALIDA:
 Devuelve ÚNICAMENTE un objeto JSON válido con esta estructura exacta, sin markdown ni texto adicional:
 {{
-    "tipo_documento": "tutela" o "derecho_peticion",
+    "tipo_documento": "TUTELA" o "DERECHO_PETICION",
     "razon_tipo_documento": "explicación breve de por qué se eligió tutela o derecho de petición",
     "hechos": "narrativa de los hechos o cadena vacía",
     "ciudad_de_los_hechos": "ciudad donde ocurrieron los hechos o cadena vacía",
@@ -520,7 +520,7 @@ Devuelve ÚNICAMENTE un objeto JSON válido con esta estructura exacta, sin mark
     "tiene_perjuicio_irremediable": true o false,
     "es_procedente_tutela": true o false,
     "razon_improcedencia": "razón de improcedencia o cadena vacía",
-    "tipo_documento_recomendado": "tutela" o "derecho_peticion"
+    "tipo_documento_recomendado": "TUTELA" o "DERECHO_PETICION"
 }}"""
 
     try:
@@ -559,18 +559,18 @@ Devuelve ÚNICAMENTE un objeto JSON válido con esta estructura exacta, sin mark
         for campo in campos_esperados:
             if campo not in datos_extraidos:
                 if campo == "tipo_documento":
-                    datos_extraidos[campo] = "tutela"  # Valor por defecto
+                    datos_extraidos[campo] = "TUTELA"  # Valor por defecto
                 elif campo in ["actua_en_representacion", "hubo_derecho_peticion_previo",
                                "tiene_perjuicio_irremediable", "es_procedente_tutela"]:
                     datos_extraidos[campo] = False  # Valor por defecto para booleanos
                 elif campo == "tipo_documento_recomendado":
-                    datos_extraidos[campo] = "derecho_peticion"  # Por defecto recomendar derecho de petición (subsidiariedad)
+                    datos_extraidos[campo] = "DERECHO_PETICION"  # Por defecto recomendar derecho de petición (subsidiariedad)
                 else:
                     datos_extraidos[campo] = ""
 
         # Validar que tipo_documento tenga un valor válido
-        if datos_extraidos["tipo_documento"] not in ["tutela", "derecho_peticion"]:
-            datos_extraidos["tipo_documento"] = "tutela"  # Fallback a tutela si el valor no es válido
+        if datos_extraidos["tipo_documento"] not in ["TUTELA", "DERECHO_PETICION"]:
+            datos_extraidos["tipo_documento"] = "TUTELA"  # Fallback a tutela si el valor no es válido
 
         return datos_extraidos
 
