@@ -162,8 +162,8 @@ def registrar_fin_sesion(caso_id: int, duracion_minutos: int, db: Session, ya_fu
 
     # Solo contar la sesión si:
     # 1. Es la primera vez que se finaliza (ya_fue_finalizada = False)
-    # 2. Y duró más de 1 minuto
-    debe_contar_sesion = not ya_fue_finalizada and duracion_minutos > 1
+    # 2. Sin importar la duración (se cuenta aunque dure menos de 1 minuto)
+    debe_contar_sesion = not ya_fue_finalizada
 
     # Buscar o crear registro de uso diario
     sesion_diaria = db.query(SesionDiaria).filter(

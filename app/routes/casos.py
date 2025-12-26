@@ -271,10 +271,10 @@ def obtener_campos_criticos(
         bloqueantes = [
             "entidad_accionada",
             "hechos",
-            "derechos_vulnerados",
             "pretensiones"
         ]
         sensibles = [
+            "derechos_vulnerados",  # Recomendado pero no obligatorio
             "direccion_entidad",
             "ciudad_de_los_hechos",
             "pruebas"
@@ -314,6 +314,20 @@ def obtener_campos_criticos(
         valor = getattr(caso, campo, None)
         if not valor or (isinstance(valor, str) and not valor.strip()):
             bloqueantes_faltantes.append(campo)
+
+    # CRÍTICO: También validar datos del solicitante (son obligatorios para generar documento)
+    from ..core.validators import validar_cedula_colombiana, validar_nit_colombiano
+
+    if not caso.nombre_solicitante or caso.nombre_solicitante.strip() == "":
+        bloqueantes_faltantes.append("nombre_solicitante")
+
+    if not caso.identificacion_solicitante or caso.identificacion_solicitante.strip() == "":
+        bloqueantes_faltantes.append("identificacion_solicitante")
+    else:
+        # Validar formato de identificación
+        if not (validar_cedula_colombiana(caso.identificacion_solicitante) or
+                validar_nit_colombiano(caso.identificacion_solicitante)):
+            bloqueantes_faltantes.append("identificacion_solicitante")
 
     sensibles_faltantes = []
     for campo in sensibles:
@@ -648,7 +662,7 @@ def generar_documento(
         )
 
     # ⚖️ VALIDACIÓN DE SUBSIDIARIEDAD (Art. 86 C.P. - Decreto 2591/1991)
-    # Si es tutela, DEBE cumplir requisitos de subsidiariedad
+    # Si es tutela, validar subsidiariedad y cambiar a derecho de petición si no cumple
     if caso.tipo_documento and caso.tipo_documento.value == "TUTELA":
         logger.info(f"⚖️ Validando subsidiariedad para tutela del caso {caso_id}...")
 
@@ -659,22 +673,19 @@ def generar_documento(
             logger.warning(f"   Hubo derecho de petición previo: {caso.hubo_derecho_peticion_previo}")
             logger.warning(f"   Tiene perjuicio irremediable: {caso.tiene_perjuicio_irremediable}")
 
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail={
-                    "message": "La tutela no procede según el principio de subsidiariedad",
-                    "razon": caso.razon_improcedencia or "No se cumple el requisito de subsidiariedad. Primero debe agotar el derecho de petición o demostrar perjuicio irremediable.",
-                    "sugerencia": "Se recomienda presentar primero un derecho de petición a la entidad. Si no responden en 15 días o niegan sin fundamento, ahí sí procede la tutela.",
-                    "hubo_derecho_peticion_previo": caso.hubo_derecho_peticion_previo or False,
-                    "tiene_perjuicio_irremediable": caso.tiene_perjuicio_irremediable or False
-                }
-            )
-
-        logger.info(f"✅ Tutela cumple subsidiariedad - Puede generarse")
+            # 🔄 CAMBIO AUTOMÁTICO: En lugar de bloquear, cambiar a DERECHO DE PETICIÓN
+            logger.info(f"🔄 Cambiando automáticamente a DERECHO DE PETICIÓN...")
+            caso.tipo_documento = TipoDocumento.DERECHO_PETICION
+            db.commit()
+            logger.info(f"✅ Documento cambiado a DERECHO DE PETICIÓN - Continuando con generación")
+        else:
+            logger.info(f"✅ Tutela cumple subsidiariedad - Puede generarse")
 
     # 🔍 VALIDACIÓN ESTRICTA: Validar campos críticos según tipo de documento
     from ..core.validation_helper import validar_caso_completo
 
+    # Refrescar el caso para obtener el tipo actualizado (en caso de cambio automático)
+    db.refresh(caso)
     tipo_doc = caso.tipo_documento.value if caso.tipo_documento else "TUTELA"
     resultado_validacion = validar_caso_completo(caso, tipo_doc)
 
@@ -712,8 +723,8 @@ def generar_documento(
             'pruebas': caso.pruebas,
         }
 
-        # Generar documento según el tipo
-        if caso.tipo_documento.value == 'tutela':
+        # Generar documento según el tipo (usar tipo_doc ya validado)
+        if tipo_doc == 'TUTELA':
             documento_generado = openai_service.generar_tutela(datos_caso)
         else:
             documento_generado = openai_service.generar_derecho_peticion(datos_caso)

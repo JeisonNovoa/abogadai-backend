@@ -148,12 +148,8 @@ def validar_campos_criticos_tutela(datos_caso: dict) -> List[ValidationMessage]:
             message="Los hechos del caso son obligatorios. Debes narrar qué sucedió para fundamentar la tutela."
         ))
 
-    if not datos_caso.get('derechos_vulnerados') or datos_caso['derechos_vulnerados'].strip() == "":
-        errores.append(ValidationMessage(
-            field="derechos_vulnerados",
-            level=ValidationLevel.ERROR,
-            message="Los derechos vulnerados son obligatorios para una tutela. Debes indicar qué derechos fundamentales están siendo afectados."
-        ))
+    # NOTA: derechos_vulnerados ya NO es obligatorio (ahora es recomendado pero opcional)
+    # La IA intentará extraerlo, pero si no lo hace o el usuario no lo completa, no bloqueará
 
     if not datos_caso.get('pretensiones') or datos_caso['pretensiones'].strip() == "":
         errores.append(ValidationMessage(
